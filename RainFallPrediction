@@ -1,0 +1,605 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+# ManiChandana Thumati
+# AM.EN.U4CSE19169
+
+# In[152]:
+
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn import metrics
+
+
+# In[153]:
+
+
+#data collection
+data = pd.read_csv("rainfall in india 1901-2015.csv")
+data.head()
+
+
+# In[154]:
+
+
+data.info()
+
+
+# In[155]:
+
+
+# date preprocessing
+data.isnull().sum()
+
+
+# In[156]:
+
+
+data.duplicated().sum()
+
+
+# In[157]:
+
+
+data['SUBDIVISION'].value_counts()
+
+
+# In[158]:
+
+
+data.mean()
+
+
+# In[159]:
+
+
+data = data.fillna(data.mean())
+
+
+# In[160]:
+
+
+data.head(3)
+
+
+# In[161]:
+
+
+data.isnull().any()
+
+
+# In[162]:
+
+
+print(data.YEAR.unique())
+print("\n"+str(len(data.YEAR.unique())) + 'years')
+
+
+# In[163]:
+
+
+data.describe()
+
+
+# In[164]:
+
+
+data.shape
+
+
+# In[165]:
+
+
+sns.distplot(data['ANNUAL'], hist =True)
+
+
+# In[166]:
+
+
+# Scatter and density plots
+def plotScatterMatrix(df, plotSize, textSize):
+    df = df.select_dtypes(include =[np.number]) # keep only numerical columns
+    # Remove rows and columns that would lead to df being singular
+    df = df.dropna('columns')
+    df = df[[col for col in df if df[col].nunique() > 1]] # keep columns where there are more than 1 unique values
+    columnNames = list(df)
+    if len(columnNames) > 10: # reduce the number of columns for matrix inversion of kernel density plots
+        columnNames = columnNames[:10]
+    df = df[columnNames]
+    ax = pd.plotting.scatter_matrix(df, alpha=0.75, figsize=[plotSize, plotSize], diagonal='kde')
+    corrs = df.corr().values
+    for i, j in zip(*plt.np.triu_indices_from(ax, k = 1)):
+        ax[i, j].annotate('Corr. coef = %.3f' % corrs[i, j], (0.8, 0.2), xycoords='axes fraction', ha='center', va='center', size=textSize)
+    plt.suptitle('Scatter and Density Plot')
+    plt.show()
+
+
+# In[167]:
+
+
+plotScatterMatrix(data, 20, 10)
+
+
+# In[168]:
+
+
+# data visulization
+data[["SUBDIVISION","ANNUAL"]].groupby("SUBDIVISION").sum().sort_values(by='ANNUAL',ascending=False).plot(kind='barh',stacked=True,figsize=(15,10))
+plt.xlabel("Rainfall in MM",size=12)
+plt.ylabel("Sub-Division",size=12)
+plt.title("Annual Rainfall v/s SubDivisions")
+plt.grid(axis="x",linestyle="-.")
+plt.show()
+
+
+# In[169]:
+
+
+plt.figure(figsize=(15,8))
+data.groupby("YEAR").sum()['ANNUAL'].plot(kind="line",color="r",marker=".")
+plt.xlabel("YEARS",size=12)
+plt.ylabel("RAINFALL IN MM",size=12)
+plt.grid(axis="both",linestyle="-.")
+plt.title("Rainfall over Years")
+plt.show()
+
+
+# In[170]:
+
+
+data[['YEAR', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL','AUG', 'SEP',
+      'OCT', 'NOV', 'DEC']].groupby("YEAR").sum().plot(kind="line",figsize=(18,8))
+plt.xlabel("Year",size=13)
+plt.ylabel("Rainfall in MM",size=13)
+plt.title("Year v/s Rainfall in each month",size=20)
+plt.show()
+
+
+# In[171]:
+
+
+data[['YEAR','Jan-Feb', 'Mar-May',
+       'Jun-Sep', 'Oct-Dec']].groupby("YEAR").sum().plot(figsize=(10,7))
+plt.xlabel("Year",size=13)
+plt.ylabel("Rainfall in MM",size=13)
+plt.show()
+
+
+# In[172]:
+
+
+data[['SUBDIVISION', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL',
+       'AUG', 'SEP', 'OCT', 'NOV', 'DEC']].groupby("SUBDIVISION").sum().plot(kind="barh",stacked=True,figsize=(13,8))
+plt.title("Sub-Division v/s Rainfall in each month")
+plt.xlabel("Rainfall in MM",size=12)
+plt.ylabel("Sub-Division",size=12)
+plt.grid(axis="x",linestyle="-.")
+plt.show()
+
+
+# In[173]:
+
+
+data[['SUBDIVISION', 'Jan-Feb', 'Mar-May',
+       'Jun-Sep', 'Oct-Dec']].groupby("SUBDIVISION").sum().plot(kind="barh",stacked=True,figsize=(16,8))
+plt.xlabel("Rainfall in MM",size=12)
+plt.ylabel("Sub-Division",size=12)
+plt.grid(axis="x",linestyle="-.")
+plt.show()
+
+
+# In[174]:
+
+
+#Correlation between each numeric attribute
+plt.figure(figsize=(15,6))
+sns.heatmap(data[['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC','ANNUAL']].corr(),annot=True)
+plt.show()
+
+
+# In[175]:
+
+
+# Subdivisions receiving maximum and minimum rainfall
+print("Top 10")
+print(data.groupby('SUBDIVISION').mean()['ANNUAL'].sort_values(ascending=False).head(10))
+print('\n')
+print("--------------------------------------------")
+print("Tail 10")
+print(data.groupby('SUBDIVISION').mean()['ANNUAL'].sort_values(ascending=False).tail(10))
+
+
+# In[176]:
+
+
+# Years which recorded maximum and minimum rainfall
+print("Top 10")
+print(data.groupby('YEAR').mean()['ANNUAL'].sort_values(ascending=False).head(10))
+print('\n')
+print("--------------------------------------------")
+print("Tail 10")
+print(data.groupby('YEAR').mean()['ANNUAL'].sort_values(ascending=False).tail(10))
+
+
+# In[177]:
+
+
+#Modelling
+data["SUBDIVISION"].nunique()
+group = data.groupby('SUBDIVISION')['YEAR','JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP',
+'OCT','NOV','DEC']
+data=group.get_group(('TAMIL NADU'))
+data.head()
+
+
+# In[178]:
+
+
+df=data.melt(['YEAR']).reset_index()
+df.head()
+
+
+# In[179]:
+
+
+df= df[['YEAR','variable','value']].reset_index().sort_values(by=['YEAR','index'])
+df.head(24)
+
+
+# In[180]:
+
+
+df.YEAR.unique()
+df.columns=['Index','Year','Month','Avg_Rainfall']
+df.head()
+
+
+# In[181]:
+
+
+Month_map={'JAN':1,'FEB':2,'MAR' :3,'APR':4,'MAY':5,'JUN':6,'JUL':7,'AUG':8,'SEP':9, 'OCT':10,'NOV':11,'DEC':12}
+df['Month']=df['Month'].map(Month_map)
+df.head(12)
+
+
+# In[182]:
+
+
+df.drop(columns="Index",inplace=True)
+df.head(2)
+
+
+# In[183]:
+
+
+df.groupby("Year").sum().plot()
+plt.show()
+
+
+# In[184]:
+
+
+X=np.asanyarray(df[['Year','Month']]).astype('int')
+y=np.asanyarray(df['Avg_Rainfall']).astype('int')
+print(X.shape)
+print(y.shape)
+
+
+# In[185]:
+
+
+from sklearn.model_selection import train_test_split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=10)
+
+
+# In[186]:
+
+
+#Linear Regression Model
+from sklearn.linear_model import LinearRegression
+LR = LinearRegression()
+LR.fit(X_train,y_train)
+
+
+# In[187]:
+
+
+## predicting
+y_train_predict=LR.predict(X_train)
+y_test_predict=LR.predict(X_test)
+print(y_train_predict)
+print(" ")
+print("---------------------------------------------------")
+print(" ")
+print(y_test_predict)
+
+
+# In[188]:
+
+
+print("-------Test Data ------- ")
+print('MAE:', metrics.mean_absolute_error(y_test, y_test_predict))
+print('MSE:', metrics.mean_squared_error(y_test, y_test_predict))
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_test, y_test_predict)))
+
+
+# In[189]:
+
+
+print("\n-------Train Data--------")
+print('MAE:', metrics.mean_absolute_error(y_train,y_train_predict))
+print('MSE:', metrics.mean_squared_error(y_train, y_train_predict))
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_train, y_train_predict)))
+
+
+# In[190]:
+
+
+print("\n-----Training Accuracy-------")
+print(round(LR.score(X_train,y_train),3)*100)
+print("-----Testing Accuracy -------")
+print(round(LR.score(X_test,y_test),3)*100)
+
+
+# In[191]:
+
+
+#Lasso Model
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import GridSearchCV
+
+
+# In[192]:
+
+
+# create a lasso object
+lasso = Lasso(max_iter=100000)
+
+
+# In[193]:
+
+
+# check for best alpha value using GridSearch
+parameter={'alpha':[1e-15,1e-10,1e-8,1e-3,1e-2,1,5,1e1,1e2,1e3,1e4,1e5,1e6,1e7]}
+lasso_regressor=GridSearchCV(
+lasso,parameter,
+scoring='neg_mean_squared_error',cv=5)
+
+
+# In[194]:
+
+
+lasso_regressor.fit(X_train,y_train)
+print("Best Parameter for Lasso:",lasso_regressor.best_estimator_)
+
+
+# In[195]:
+
+
+lasso=Lasso(alpha=100.0,max_iter=100000)
+# fit into the object
+lasso.fit(X_train,y_train)
+
+
+# In[196]:
+
+
+# predicting
+y_train_predict=lasso.predict(X_train)
+y_test_predict=lasso.predict(X_test)
+print(y_train_predict)
+print(" ")
+print("---------------------------------------------------")
+print(" ")
+print(y_test_predict)
+
+
+# In[197]:
+
+
+#lasso regression
+from sklearn import metrics
+print("\n-------Train Data--------")
+print('MAE:', metrics.mean_absolute_error(y_train,y_train_predict))
+print('MSE:', metrics.mean_squared_error(y_train, y_train_predict))
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_train, y_train_predict)))
+
+
+# In[198]:
+
+
+print("-------Test Data ------- ")
+print('MAE:', metrics.mean_absolute_error(y_test, y_test_predict))
+print('MSE:', metrics.mean_squared_error(y_test, y_test_predict))
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_test, y_test_predict)))
+
+
+# In[199]:
+
+
+print("\n-----Training Accuracy-------")
+print(round(lasso.score(X_train,y_train),3)*100)
+print("-----Testing Accuracy -------")
+print(round(lasso.score(X_test,y_test),3)*100)
+
+
+# In[200]:
+
+
+#Ridge Model
+from sklearn.linear_model import Ridge
+from sklearn.model_selection import GridSearchCV
+
+
+# In[201]:
+
+
+ridge=Ridge()
+parameters={'alpha':[1e-15,1e-10,1e-8,1e-3,1e-2,1,5,10,20,30,35,40,45,50,55,100]}
+ridge_regressor=GridSearchCV(ridge,parameters,scoring='neg_mean_squared_error',cv=5)
+ridge_regressor.fit(X_train,y_train)
+
+
+# In[202]:
+
+
+print(ridge_regressor.best_params_)
+print(ridge_regressor.best_score_)
+print("Best Parameter for Ridge:",ridge_regressor.best_estimator_)
+
+
+# In[203]:
+
+
+ridge=Ridge(alpha=100.0)
+# fit into the object
+ridge.fit(X_train,y_train)
+
+
+# In[204]:
+
+
+# predicting
+y_train_predict=ridge.predict(X_train)
+y_test_predict=ridge.predict(X_test)
+print(y_train_predict)
+print(" ")
+print("---------------------------------------------------")
+print(" ")
+print(y_test_predict)
+
+
+# In[205]:
+
+
+from sklearn import metrics
+print("\n-------Train Data--------")
+print('MAE:', metrics.mean_absolute_error(y_train,y_train_predict))
+print('MSE:', metrics.mean_squared_error(y_train, y_train_predict))
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_train, y_train_predict)))
+
+
+# In[206]:
+
+
+print("-------Test Data ------- ")
+print('MAE:', metrics.mean_absolute_error(y_test, y_test_predict))
+print('MSE:', metrics.mean_squared_error(y_test, y_test_predict))
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_test, y_test_predict)))
+
+
+# In[207]:
+
+
+print("\n-----Training Accuracy-------")
+print(round(ridge.score(X_train,y_train),3)*100)
+print("-----Testing Accuracy -------")
+print(round(ridge.score(X_test,y_test),3)*100)
+
+
+# In[208]:
+
+
+#SVM Model
+from sklearn import preprocessing
+from sklearn import svm
+
+
+# In[209]:
+
+
+svm_regr = svm.SVC(kernel='rbf')
+svm_regr.fit(X_train, y_train)
+y_test_predict = svm_regr.predict(X_test)
+y_train_predict = svm_regr.predict(X_train)
+#print(y_train_predict)
+#print(" ")
+#print("---------------------------------------------------")
+#print(" ")
+#print(y_test_predict)
+
+
+# In[210]:
+
+
+from sklearn import metrics
+print("\n-------Train Data--------")
+print('MAE:', metrics.mean_absolute_error(y_train,y_train_predict))
+print('MSE:', metrics.mean_squared_error(y_train, y_train_predict))
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_train, y_train_predict)))
+
+
+# In[211]:
+
+
+print("-------Test Data ------- ")
+print('MAE:', metrics.mean_absolute_error(y_test, y_test_predict))
+print('MSE:', metrics.mean_squared_error(y_test, y_test_predict))
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_test, y_test_predict)))
+
+
+# In[212]:
+
+
+print("\n-----Training Accuracy-------")
+print(round(svm_regr.score(X_train,y_train),3)*100)
+print("-----Testing Accuracy -------")
+print(round(svm_regr.score(X_test,y_test),3)*100)
+
+
+# In[213]:
+
+
+#Random Forest Model
+from sklearn.ensemble import RandomForestRegressor
+random_forest_model = RandomForestRegressor(max_depth=100, max_features='sqrt', min_samples_leaf=4,
+min_samples_split=10, n_estimators=800)
+random_forest_model.fit(X_train, y_train)
+y_train_predict=random_forest_model.predict(X_train)
+y_test_predict=random_forest_model.predict(X_test)
+#print(y_train_predict)
+#print(" ")
+#print("---------------------------------------------------")
+#print(" ")
+#print(y_test_predict)
+
+print("\n-------Train Data--------")
+print('MAE:', metrics.mean_absolute_error(y_train,y_train_predict))
+print('MSE:', metrics.mean_squared_error(y_train, y_train_predict))
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_train, y_train_predict)))
+
+print("-------Test Data ------- ")
+print('MAE:', metrics.mean_absolute_error(y_test, y_test_predict))
+print('MSE:', metrics.mean_squared_error(y_test, y_test_predict))
+print('RMSE:', np.sqrt(metrics.mean_squared_error(y_test, y_test_predict)))
+
+print("-----------Training Accuracy ----------- ")
+print(round(random_forest_model.score(X_train,y_train),3)*100)
+print("-----------Testing Accuracy ----------- ")
+print(round(random_forest_model.score(X_test,y_test),3)*100)
+
+
+# In[214]:
+
+
+predicted = random_forest_model.predict([[2021,10]])
+print(predicted)
+
+
+# In[215]:
+
+
+predicted = random_forest_model.predict([[2021,9]])
+print(predicted)
+
+
+# In[ ]:
+
+
+
+
+
+# In[ ]:
